@@ -1,15 +1,40 @@
-FROM node:12.2
+FROM mhart/alpine-node:12 as development
 
-ENV HOME=/home/app
+# Create app directory
+WORKDIR /usr/src/app
 
-RUN apt-get update && apt-get install htop
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# where available (npm@5+)
+COPY package*.json ./
 
-COPY package.json package-lock.json $HOME/node_docker/
+RUN npm install
 
-WORKDIR $HOME/node_docker
+# Bundle app source
+COPY . .
 
-RUN npm install --silent --progress=false
+EXPOSE 8080
+CMD [ "node", "server.js" ]
 
-COPY . $HOME/node_docker
+FROM mhart/alpine-node:12 as test
+WORKDIR /usr/src/app
+COPY --from=development /usr/src/app/ .
+RUN ["npm", "run", "test"]
 
-CMD ["npm", "start"]
+
+FROM mhart/alpine-node:12 as production
+
+# Create app directory
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+
+RUN npm ci --only=production
+# If you are building your code for production
+# RUN npm ci --only=production
+
+# Bundle app source
+COPY . .
+
+EXPOSE 8080
+CMD [ "node", "server.js" ]

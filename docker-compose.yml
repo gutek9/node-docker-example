@@ -1,14 +1,25 @@
-version: '2'
+version: '3'
 services:
-  app:
-    build: .
-    image: this_is_a_test
+  nodejs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sample_app:v1
+    restart: unless-stopped
+    #env_file: .env
     environment:
-      NODE_ENV: development
-    tty: true
+      - NODE_ENV=test
     ports:
-      - '3000:3000'
-    depends_on:
-      - mongodb
-  mongodb:
-    image: mongo:3.2.5
+      - "8081:8080"
+  proxy:
+      build:
+        context: .
+        dockerfile: Dockerfile.nginx
+      image: nginx_proxy:v1
+      ports:
+        - 8082:80
+      depends_on:
+        - nodejs
+      deploy:
+        placement:
+          constraints: [node.role == manager]
